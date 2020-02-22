@@ -1,8 +1,6 @@
 package meta
 
 import (
-	"bytes"
-	"encoding/gob"
 	"sort"
 	"strings"
 )
@@ -218,32 +216,6 @@ func (m TypesMap) String() string {
 	}
 	sort.Strings(types)
 	return strings.Join(types, "|")
-}
-
-// GobEncode is a custom gob marshaller
-func (m TypesMap) GobEncode() ([]byte, error) {
-	w := new(bytes.Buffer)
-	encoder := gob.NewEncoder(w)
-	err := encoder.Encode(m.immutable)
-	if err != nil {
-		return nil, err
-	}
-	err = encoder.Encode(m.m)
-	if err != nil {
-		return nil, err
-	}
-	return w.Bytes(), nil
-}
-
-// GobDecode is custom gob unmarshaller
-func (m *TypesMap) GobDecode(buf []byte) error {
-	r := bytes.NewBuffer(buf)
-	decoder := gob.NewDecoder(r)
-	err := decoder.Decode(&m.immutable)
-	if err != nil {
-		return err
-	}
-	return decoder.Decode(&m.m)
 }
 
 // Find applies a predicate function to every contained type.

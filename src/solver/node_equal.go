@@ -27,7 +27,7 @@ func nodeAwareDeepEqual(a, b interface{}) bool {
 	} else if t1.Kind() == reflect.Slice && t1.Elem().Implements(nodeType) {
 		return nodeSliceDeepEqual(a.([]node.Node), b.([]node.Node))
 	} else {
-		return reflect.DeepEqual(a, b)
+		return false
 	}
 }
 

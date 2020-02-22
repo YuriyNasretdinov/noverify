@@ -2,7 +2,6 @@ package linter
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/VKCOM/noverify/src/meta"
@@ -17,7 +16,6 @@ import (
 	"github.com/VKCOM/noverify/src/php/parser/node/stmt"
 	"github.com/VKCOM/noverify/src/php/parser/walker"
 	"github.com/VKCOM/noverify/src/phpdoc"
-	"github.com/VKCOM/noverify/src/rules"
 	"github.com/VKCOM/noverify/src/solver"
 )
 
@@ -162,23 +160,27 @@ func (b *BlockWalker) checkBinaryVoidType(left, right node.Node) {
 func (b *BlockWalker) EnterNode(w walker.Walkable) (res bool) {
 	res = true
 
-	for _, c := range b.custom {
-		c.BeforeEnterNode(w)
-	}
-
 	n := w.(node.Node)
 
-	if b.ctx.exitFlags != 0 {
-		b.reportDeadCode(n)
-	}
+	/*
+		for _, c := range b.custom {
+			c.BeforeEnterNode(w)
+		}
 
-	if ffs := n.GetFreeFloating(); ffs != nil {
-		for _, cs := range *ffs {
-			for _, c := range cs {
-				b.parseComment(c)
+		n := w.(node.Node)
+
+		if b.ctx.exitFlags != 0 {
+			b.reportDeadCode(n)
+		}
+
+		if ffs := n.GetFreeFloating(); ffs != nil {
+			for _, cs := range *ffs {
+				for _, c := range cs {
+					b.parseComment(c)
+				}
 			}
 		}
-	}
+	*/
 
 	switch s := w.(type) {
 	case *stmt.Expression:
@@ -387,20 +389,24 @@ func (b *BlockWalker) EnterNode(w walker.Walkable) (res bool) {
 		b.r.checkKeywordCase(n, "require_once")
 	}
 
-	for _, c := range b.custom {
-		c.AfterEnterNode(w)
-	}
+	/*
+		for _, c := range b.custom {
+			c.AfterEnterNode(w)
+		}
+	*/
 
-	if meta.IsIndexingComplete() && b.r.anyRset != nil {
-		// Note: no need to check localRset for nil.
-		kind := rules.CategorizeNode(n)
-		if kind != rules.KindNone {
-			b.r.runRules(n, b.ctx.sc, b.r.anyRset.RulesByKind[kind])
-			if !b.rootLevel {
-				b.r.runRules(n, b.ctx.sc, b.r.localRset.RulesByKind[kind])
+	/*
+		if meta.IsIndexingComplete() && b.r.anyRset != nil {
+			// Note: no need to check localRset for nil.
+			kind := rules.CategorizeNode(n)
+			if kind != rules.KindNone {
+				b.r.runRules(n, b.ctx.sc, b.r.anyRset.RulesByKind[kind])
+				if !b.rootLevel {
+					b.r.runRules(n, b.ctx.sc, b.r.localRset.RulesByKind[kind])
+				}
 			}
 		}
-	}
+	*/
 
 	return res
 }
@@ -1562,15 +1568,12 @@ func (b *BlockWalker) handleIf(s *stmt.If) bool {
 			b.ctx.sc.DelVar(v, "isset/!empty")
 		}
 	}()
-	walkCond := func(cond node.Node) {
-		a := &andWalker{b: b}
-		cond.Walk(a)
-		varsToDelete = append(varsToDelete, a.varsToDelete...)
-	}
 
 	// first condition is always executed, so run it in base context
 	if s.Cond != nil {
-		walkCond(s.Cond)
+		a := &andWalker{b: b}
+		s.Cond.Walk(a)
+		varsToDelete = append(varsToDelete, a.varsToDelete...)
 	}
 
 	var contexts []*blockContext
@@ -1587,7 +1590,9 @@ func (b *BlockWalker) handleIf(s *stmt.If) bool {
 
 		ctx := b.withNewContext(func() {
 			if elsif, ok := n.(*stmt.ElseIf); ok {
-				walkCond(elsif.Cond)
+				a := &andWalker{b: b}
+				elsif.Cond.Walk(a)
+				varsToDelete = append(varsToDelete, a.varsToDelete...)
 			}
 			n.Walk(b)
 			b.r.addScope(n, b.ctx.sc)
@@ -1970,11 +1975,6 @@ func (b *BlockWalker) flushUnused() {
 
 	visitedMap := make(map[node.Node]struct{})
 	for name, nodes := range b.unusedVars {
-		if IsDiscardVar(name) {
-			// blank identifier is a way to tell linter (and PHPStorm) that result is explicitly unused
-			continue
-		}
-
 		if _, ok := superGlobals[name]; ok {
 			continue
 		}
@@ -2039,18 +2039,6 @@ func (b *BlockWalker) LeaveNode(w walker.Walkable) {
 	}
 }
 
-var fallthroughMarkerRegex = func() *regexp.Regexp {
-	markers := []string{
-		"fallthrough",
-		"fall through",
-		"falls through",
-		"no break",
-	}
-
-	pattern := `(?:/\*|//)\s?(?:` + strings.Join(markers, `|`) + `)`
-	return regexp.MustCompile(pattern)
-}()
-
 func (b *BlockWalker) caseHasFallthroughComment(n node.Node) bool {
 	ffs := n.GetFreeFloating()
 	if ffs == nil {
@@ -2058,10 +2046,8 @@ func (b *BlockWalker) caseHasFallthroughComment(n node.Node) bool {
 	}
 	for _, cs := range *ffs {
 		for _, c := range cs {
-			if c.StringType == freefloating.CommentType {
-				if fallthroughMarkerRegex.MatchString(c.Value) {
-					return true
-				}
+			if c.StringType == freefloating.CommentType && strings.Contains(c.Value, "fallthough") {
+				return true
 			}
 		}
 	}
@@ -2074,4 +2060,11 @@ func (b *BlockWalker) isBool(n node.Node) bool {
 
 func (b *BlockWalker) isVoid(n node.Node) bool {
 	return solver.ExprType(b.r.scope(), b.r.st, n).Is("void")
+}
+
+func unquote(s string) string {
+	if len(s) >= 2 && s[0] == '\'' || s[0] == '"' {
+		return s[1 : len(s)-1]
+	}
+	return s
 }

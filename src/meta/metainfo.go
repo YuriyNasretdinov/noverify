@@ -410,12 +410,6 @@ func OnIndexingComplete(cb func()) {
 
 func SetIndexingComplete(complete bool) {
 	indexingComplete = complete
-
-	if complete {
-		for _, cb := range onCompleteCallbacks {
-			cb()
-		}
-	}
 }
 
 func IsIndexingComplete() bool {

@@ -7,7 +7,6 @@ import (
 	"io"
 	"io/ioutil"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/VKCOM/noverify/src/linter/lintapi"
@@ -18,8 +17,6 @@ import (
 	"github.com/VKCOM/noverify/src/phpdoc"
 	"github.com/VKCOM/noverify/src/phpgrep"
 )
-
-var magicComment = regexp.MustCompile(`\* @(?:warning|error|info|maybe) `)
 
 type parseError struct {
 	filename string
@@ -73,13 +70,20 @@ func (p *parser) parse(filename string, r io.Reader) (*Set, error) {
 	return p.res, nil
 }
 
+func hasMagicComment(s string) bool {
+	return strings.Contains(s, "* @warning ") ||
+		strings.Contains(s, "* @error ") ||
+		strings.Contains(s, "* @info ") ||
+		strings.Contains(s, "* @maybe ")
+}
+
 func (p *parser) parseRule(st node.Node) error {
 	comment := ""
 	for _, ff := range (*st.GetFreeFloating())[freefloating.Start] {
 		if ff.StringType != freefloating.CommentType {
 			continue
 		}
-		if strings.HasPrefix(ff.Value, "/**") && magicComment.MatchString(ff.Value) {
+		if strings.HasPrefix(ff.Value, "/**") && hasMagicComment(ff.Value) {
 			comment = ff.Value
 			break
 		}

@@ -1,8 +1,6 @@
 package meta
 
 import (
-	"bytes"
-	"encoding/gob"
 	"fmt"
 	"strings"
 
@@ -27,66 +25,6 @@ type Scope struct {
 // NewScope creates new empty scope
 func NewScope() *Scope {
 	return &Scope{vars: make(map[string]*scopeVar)}
-}
-
-// GobEncode is a custom gob marshaller
-func (s *Scope) GobEncode() ([]byte, error) {
-	w := new(bytes.Buffer)
-	encoder := gob.NewEncoder(w)
-	err := encoder.Encode(s.vars)
-	if err != nil {
-		return nil, err
-	}
-	err = encoder.Encode(s.inInstanceMethod)
-	if err != nil {
-		return nil, err
-	}
-	err = encoder.Encode(s.inClosure)
-	if err != nil {
-		return nil, err
-	}
-	return w.Bytes(), nil
-}
-
-// GobDecode is custom gob unmarshaller
-func (s *Scope) GobDecode(buf []byte) error {
-	r := bytes.NewBuffer(buf)
-	decoder := gob.NewDecoder(r)
-	err := decoder.Decode(&s.vars)
-	if err != nil {
-		return err
-	}
-	err = decoder.Decode(&s.inInstanceMethod)
-	if err != nil {
-		return err
-	}
-	return decoder.Decode(&s.inClosure)
-}
-
-// GobEncode is a custom gob marshaller
-func (s *scopeVar) GobEncode() ([]byte, error) {
-	w := new(bytes.Buffer)
-	encoder := gob.NewEncoder(w)
-	err := encoder.Encode(s.typesMap)
-	if err != nil {
-		return nil, err
-	}
-	err = encoder.Encode(s.alwaysDefined)
-	if err != nil {
-		return nil, err
-	}
-	return w.Bytes(), nil
-}
-
-// GobDecode is custom gob unmarshaller
-func (s *scopeVar) GobDecode(buf []byte) error {
-	r := bytes.NewBuffer(buf)
-	decoder := gob.NewDecoder(r)
-	err := decoder.Decode(&s.typesMap)
-	if err != nil {
-		return err
-	}
-	return decoder.Decode(&s.alwaysDefined)
 }
 
 // IsInInstanceMethod returns whether or not this scope exists in instance method (and thus closures must capture $this)

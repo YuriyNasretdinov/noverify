@@ -1,8 +1,9 @@
 package main
 
 import (
-	"encoding/json"
+	"strings"
 	"syscall/js"
+	"time"
 
 	"github.com/VKCOM/noverify/src/linter"
 	"github.com/VKCOM/noverify/src/meta"
@@ -11,7 +12,7 @@ import (
 )
 
 func parse(filename string, contents string) (rootNode node.Node, w *linter.RootWalker, err error) {
-	rootNode, w, err = linter.ParseContents(filename, []byte(contents), "UTF-8", nil)
+	rootNode, w, err = linter.ParseContents(filename, []byte(contents))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -36,24 +37,41 @@ func getReports(contents string) ([]vscode.Diagnostic, error) {
 	return w.Diagnostics, err
 }
 
+var needAnalyse = false
+
+func doAnalyse() {
+	text := js.Global().Get("editor").Call("getValue").String()
+	diags, err := getReports(text)
+
+	var value string
+	if err != nil {
+		value = "ERROR: " + err.Error()
+	} else {
+		var ds []string
+		for _, d := range diags {
+			ds = append(ds, d.Message)
+		}
+		value = strings.Join(ds, "\n")
+	}
+
+	js.Global().Call("showErrors", value)
+}
+
 func main() {
 	linter.LangServer = true
 
-	go linter.MemoryLimiterThread()
+	go func() {
+		for {
+			time.Sleep(time.Second)
+			if needAnalyse {
+				needAnalyse = false
+				doAnalyse()
+			}
+		}
+	}()
 
 	js.Global().Set("analyzeCallback", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		text := js.Global().Get("editor").Call("getValue").String()
-		diags, err := getReports(text)
-
-		var value string
-		if err != nil {
-			value = "ERROR: " + err.Error()
-		} else {
-			m, _ := json.Marshal(diags)
-			value = string(m)
-		}
-
-		js.Global().Call("showErrors", value)
+		needAnalyse = true
 		return nil
 	}))
 

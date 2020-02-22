@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/VKCOM/noverify/src/inputs"
 	"github.com/VKCOM/noverify/src/lintdebug"
 	"github.com/VKCOM/noverify/src/linter"
 	"github.com/VKCOM/noverify/src/meta"
@@ -175,7 +176,7 @@ func externalChanges(changes []vscode.FileEvent) {
 
 // getFileContents reads specified file and returns UTF-8 encoded bytes.
 func getFileContents(filename string) ([]byte, error) {
-	r, err := linter.SrcInput.NewReader(filename)
+	r, err := inputs.NewDefaultSourceInput().NewReader(filename)
 	if err != nil {
 		return nil, fmt.Errorf("open input: %v", err)
 	}

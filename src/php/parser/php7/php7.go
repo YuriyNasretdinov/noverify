@@ -3,13 +3,12 @@
 //line php7/php7.y:2
 package php7
 
-import __yyfmt__ "fmt"
-
-//line php7/php7.y:2
-
 import (
+	__yyfmt__ "fmt"
 	"strconv"
-	"strings"
+	"strings" //line php7/php7.y:2
+
+	//line php7/php7.y:22
 
 	"github.com/VKCOM/noverify/src/php/parser/freefloating"
 	"github.com/VKCOM/noverify/src/php/parser/node"
@@ -23,7 +22,6 @@ import (
 	"github.com/VKCOM/noverify/src/php/parser/scanner"
 )
 
-//line php7/php7.y:22
 type yySymType struct {
 	yys        int
 	node       node.Node

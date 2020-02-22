@@ -34,20 +34,12 @@ type sideEffectsFinder struct {
 	sideEffects bool
 }
 
-var pureBuiltins = func() map[string]struct{} {
-	list := []string{
-		`\count`,
-		`\strlen`,
-		`\implode`,
-		`\explode`,
-	}
-
-	set := make(map[string]struct{}, len(list))
-	for _, nm := range list {
-		set[nm] = struct{}{}
-	}
-	return set
-}()
+var pureBuiltins = map[string]struct{}{
+	`\count`:   struct{}{},
+	`\strlen`:  struct{}{},
+	`\implode`: struct{}{},
+	`\explode`: struct{}{},
+}
 
 func (f *sideEffectsFinder) functionCallIsPure(n *expr.FunctionCall) bool {
 	// Allow referencing builtin funcs even before indexing is completed.

@@ -64,7 +64,7 @@ func TestExprTypeFixes(t *testing.T) {
 		{`array1()`, `int[]`},
 		{`array2()`, `int[][]`},
 		{`array_int()`, `int[]`},
-		{`array_int_string()`, `string[]`}, // key type is currently ignored
+		{`array_int_string()`, `string[]`},      // key type is currently ignored
 		{`array_int_stdclass()`, `\stdclass[]`}, // key type is currently ignored
 		{`array_return_string()`, `string`},
 	}
